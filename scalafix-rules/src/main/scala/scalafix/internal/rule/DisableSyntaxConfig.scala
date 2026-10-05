@@ -102,7 +102,9 @@ case class DisableSyntaxConfig(
     case "null" if noNulls => true
     case "return" if noReturns => true
     case "while" if noWhileLoops => true
-    case _ => keywords.contains(DisabledKeyword(keyword))
+    // Keyword.unapply lowercases the token class name, but a configured
+    // keyword can be camel-cased ("forSome"), so match case-insensitively
+    case _ => keywords.exists(_.keyword.equalsIgnoreCase(keyword))
   }
 }
 
@@ -119,7 +121,9 @@ object DisableSyntaxConfig extends TPrintImplicits {
 object Keyword {
   def unapply(token: Token): Option[String] = {
     val prefix = token.productPrefix
-    if (kwSet.contains(prefix)) {
+    // scalameta token class names are "Kw" + keyword without a fixed
+    // capitalization ("KwForsome"), so match case-insensitively
+    if (kwSet.contains(prefix.toLowerCase)) {
       Some(prefix.drop(2).toLowerCase)
     } else {
       None
@@ -169,7 +173,7 @@ object Keyword {
     "yield"
   )
   val set: Set[String] = all.toSet
-  private val kwSet = all.map(kw => s"Kw${kw.capitalize}").toSet
+  private val kwSet = all.map(kw => s"kw${kw.toLowerCase}").toSet
 }
 
 case class DisabledKeyword(keyword: String)
